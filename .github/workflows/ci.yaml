@@ -2,13 +2,14 @@ name: EKS CI/CD Pipeline
 
 on:
   push:
-    branches: [dev, qa, prod]
+    branches: [dev, qa, prod, main]
 
 env:
   CLUSTER_NAME: ct-cluster
   ECR_URI: 634898291786.dkr.ecr.us-east-1.amazonaws.com/ct-ecr
   DEPLOYMENT_NAME: springbootapp
   SERVICE_NAME: springbootapp-service
+  WORKDIR: currency-exchange-sample-service
 
 permissions:
   id-token: write
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   setup:
-    name: Setup
+    name: Set Deployment Environment
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.setenv.outputs.env }}
@@ -34,14 +35,14 @@ jobs:
           fi
 
   build-test:
-    name: Build, Test, Sonar (Parallel)
+    name: Build & Test (Parallel)
     needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
         job: [junit, sonar]
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Java
@@ -52,10 +53,12 @@ jobs:
       - name: Build with Maven
         if: matrix.job == 'junit'
         run: mvn clean install
+        working-directory: ${{ env.WORKDIR }}
 
       - name: Run JUnit Tests
         if: matrix.job == 'junit'
         run: mvn test
+        working-directory: ${{ env.WORKDIR }}
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
@@ -66,13 +69,14 @@ jobs:
             -Dsonar.projectKey=springbootapp \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
+        working-directory: ${{ env.WORKDIR }}
 
   quality-gate:
     name: Check Quality Gate
     needs: build-test
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Sonar analysis
+      - name: Wait for SonarQube Analysis
         run: sleep 30
 
       - name: Check Sonar Quality Gate
@@ -91,30 +95,31 @@ jobs:
     needs: quality-gate
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.GITHUB_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         run: aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URI
 
       - name: Build Docker image
         run: docker build -t $ECR_URI:${{ github.sha }} .
+        working-directory: ${{ env.WORKDIR }}
 
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: $ECR_URI:${{ github.sha }}
+          image-ref: ${{ env.ECR_URI }}:${{ github.sha }}
           severity: CRITICAL
           format: table
           exit-code: 1
 
-      - name: Push image to ECR
+      - name: Push Docker image to ECR
         run: docker push $ECR_URI:${{ github.sha }}
 
   deploy:
@@ -124,23 +129,23 @@ jobs:
     environment:
       name: ${{ needs.setup.outputs.environment }}
       url: https://console.aws.amazon.com/eks/home
-    if: ${{ needs.setup.outputs.environment != 'prod' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.setup.outputs.environment != 'prod' }}
 
     steps:
-      - name: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.GITHUB_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name $CLUSTER_NAME
 
-      - name: Deploy to ${{ needs.setup.outputs.environment }}
+      - name: Deploy to ${{ needs.setup.outputs.environment }} namespace
         run: |
           kubectl apply -f k8s/deployment-${{ needs.setup.outputs.environment }}.yaml
           kubectl apply -f k8s/service-${{ needs.setup.outputs.environment }}.yaml
-          kubectl set image deployment/springbootapp springboot-container=$ECR_URI:${{ github.sha }} -n ${{ needs.setup.outputs.environment }}
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} -n ${{ needs.setup.outputs.environment }}
 
   prod-approval:
     name: Manual Approval for Prod
@@ -151,5 +156,5 @@ jobs:
       name: production
       url: https://console.aws.amazon.com/eks/home
     steps:
-      - name: Wait for manual approval
-        run: echo "Waiting for manual approval before deploying to production..."
+      - name: Await manual approval before deploying to prod
+        run: echo "✅ Waiting for manual approval before prod deployment..."
