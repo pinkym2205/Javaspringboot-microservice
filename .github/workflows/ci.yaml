@@ -10,6 +10,7 @@ env:
   DEPLOYMENT_NAME: springbootapp
   SERVICE_NAME: springbootapp-service
   WORKDIR: currency-exchange-sample-service
+  AWS_REGION: us-east-1
 
 permissions:
   id-token: write
@@ -73,23 +74,36 @@ jobs:
         working-directory: ${{ env.WORKDIR }}
 
   quality-gate:
-    name: Check Quality Gate
-    needs: build-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for SonarQube Analysis
-        run: sleep 30
+  name: Check Sonar Quality Gate
+  needs: sonar
+  runs-on: ubuntu-latest
+  env:
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    AWS_REGION: us-east-1  # or use secrets.AWS_REGION
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Check Sonar Quality Gate
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          STATUS=$(curl -s -u "$SONAR_TOKEN:" "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=pinkym2205_Javaspringboot-microservice" | jq -r '.projectStatus.status')
-          echo "Quality Gate Status: $STATUS"
-          if [[ "$STATUS" != "OK" ]]; then
-            aws sns publish --topic-arn "${{ secrets.SNS_TOPIC_ARN }}" --message "❌ SonarQube Quality Gate failed for ${{ github.ref_name }} branch." || true
-            exit 1
-          fi
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Wait for SonarCloud processing
+      run: sleep 30
+
+    - name: Check SonarCloud Quality Gate
+      run: |
+        STATUS=$(curl -s -u "$SONAR_TOKEN:" \
+          "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=pinkym2205_Javaspringboot-microservice" \
+          | jq -r '.projectStatus.status')
+        echo "Quality Gate Status: $STATUS"
+        if [[ "$STATUS" != "OK" ]]; then
+          aws sns publish \
+            --region $AWS_REGION \
+            --topic-arn "${{ secrets.SNS_TOPIC_ARN }}" \
+            --message "❌ SonarQube Quality Gate failed for ${{ github.ref_name }} branch."
+          exit 1
+        fi
+
 
   docker-build:
     name: Docker Build, Scan, Push
