@@ -157,11 +157,12 @@ jobs:
 
       - name: Deploy to ${{ needs.setup.outputs.environment }} namespace
         run: |
-          kubectl apply -f ${{ env.WORKDIR }}/k8s/${{ needs.setup.outputs.environment }}/deployment.yaml
-          kubectl apply -f ${{ env.WORKDIR }}/k8s/${{ needs.setup.outputs.environment }}/service.yaml
+          kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/deployment.yaml
+          kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/service.yaml
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
           ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
           -n ${{ needs.setup.outputs.environment }}
+        working-directory: ${{ env.WORKDIR }}
 
   prod-approval:
     name: Manual Approval for Prod
