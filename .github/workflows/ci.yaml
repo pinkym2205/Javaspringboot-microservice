@@ -156,13 +156,13 @@ jobs:
         run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name $CLUSTER_NAME
 
       - name: Deploy to ${{ needs.setup.outputs.environment }} namespace
+        working-directory: ${{ env.WORKDIR }}
         run: |
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/deployment.yaml
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/service.yaml
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
           ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
           -n ${{ needs.setup.outputs.environment }}
-        working-directory: ${{ env.WORKDIR }}
 
   prod-approval:
     name: Manual Approval for Prod
