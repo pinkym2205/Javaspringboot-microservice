@@ -56,13 +56,13 @@ jobs:
       - name: Build with Maven
         if: matrix.job == 'junit'
         run: mvn clean install
-        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+        working-directory: ${{ env.WORKDIR }}
 
 
       - name: Run JUnit Tests
         if: matrix.job == 'junit'
         run: mvn test
-        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+        working-directory: ${{ env.WORKDIR }}
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
@@ -73,7 +73,7 @@ jobs:
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
-        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+        working-directory: ${{ env.WORKDIR }}
 
   quality-gate:
     name: Check Sonar Quality Gate
@@ -125,7 +125,7 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t $ECR_URI:${{ github.sha }} .
-        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+        working-directory: ${{ env.WORKDIR }}
 
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -157,7 +157,7 @@ jobs:
         run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name $CLUSTER_NAME
 
       - name: Deploy to ${{ needs.setup.outputs.environment }} namespace
-        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+        working-directory: ${{ env.WORKDIR }}
         run: |
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/deployment.yaml
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/service.yaml
