@@ -56,12 +56,13 @@ jobs:
       - name: Build with Maven
         if: matrix.job == 'junit'
         run: mvn clean install
-        working-directory: ${{ env.WORKDIR }}
+        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
+
 
       - name: Run JUnit Tests
         if: matrix.job == 'junit'
         run: mvn test
-        working-directory: ${{ env.WORKDIR }}
+        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
@@ -72,7 +73,7 @@ jobs:
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
-        working-directory: ${{ env.WORKDIR }}
+        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
 
   quality-gate:
     name: Check Sonar Quality Gate
@@ -124,7 +125,7 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t $ECR_URI:${{ github.sha }} .
-        working-directory: ${{ env.WORKDIR }}
+        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
 
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -156,7 +157,7 @@ jobs:
         run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name $CLUSTER_NAME
 
       - name: Deploy to ${{ needs.setup.outputs.environment }} namespace
-        working-directory: ${{ env.WORKDIR }}
+        working-directory: ${{ github.workspace }}/${{ env.WORKDIR }}
         run: |
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/deployment.yaml
           kubectl apply -f k8s/${{ needs.setup.outputs.environment }}/service.yaml
@@ -173,8 +174,12 @@ jobs:
       name: production
       url: https://console.aws.amazon.com/eks/home
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Waiting for manual approval in GitHub Environment
+        run: echo "🛑 Awaiting approval in the 'production' environment..."
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
@@ -192,3 +197,6 @@ jobs:
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
             ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
             -n prod
+      
+
+
