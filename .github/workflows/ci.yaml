@@ -9,7 +9,7 @@ env:
   ECR_URI: 634898291786.dkr.ecr.us-east-1.amazonaws.com/ct-ecr
   DEPLOYMENT_NAME: springbootapp
   SERVICE_NAME: springbootapp-service
-  WORKDIR:Javaspringboot-microservice/currency-exchange-sample-service
+  WORKDIR: currency-exchange-sample-service
   AWS_REGION: us-east-1
 
 permissions:
