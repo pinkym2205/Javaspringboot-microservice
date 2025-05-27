@@ -35,7 +35,6 @@ jobs:
           else
             echo "env=prod" >> $GITHUB_OUTPUT
           fi
-
   build-test:
     name: Build & Test (Parallel)
     needs: setup
@@ -57,7 +56,6 @@ jobs:
         if: matrix.job == 'junit'
         run: mvn clean install
         working-directory: ${{ env.WORKDIR }}
-
 
       - name: Run JUnit Tests
         if: matrix.job == 'junit'
@@ -105,7 +103,6 @@ jobs:
               --message "❌ SonarQube Quality Gate failed for ${{ github.ref_name }} branch."
             exit 1
           fi
-
   docker-build:
     name: Docker Build, Scan, Push
     needs: quality-gate
@@ -165,8 +162,8 @@ jobs:
           ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
           -n ${{ needs.setup.outputs.environment }}
 
-  deploy-to-prod:
-    name: Deploy to Production (Manual Approval)
+  prod-approval:
+    name: Manual Approval for Prod
     if: github.ref_name == 'prod'
     needs: docker-build
     runs-on: ubuntu-latest
