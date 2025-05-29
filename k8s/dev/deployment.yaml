@@ -16,7 +16,7 @@ spec:
       serviceAccountName: ecr-reader
       containers:
         - name: springbootapp
-          image: 634898291786.dkr.ecr.us-east-1.amazonaws.com/ct-ecr:{{IMAGE_TAG}}
+          image: 634898291786.dkr.ecr.us-east-1.amazonaws.com/ct-ecr:latest
           ports:
             - containerPort: 8080
           readinessProbe:
