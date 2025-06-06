@@ -163,8 +163,8 @@ jobs:
             ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
             -n ${{ needs.setup.outputs.environment }}
 
-  prod-approval:
-    name: Manual Approval for Prod
+  deploy-to-prod:
+    name: Deploy to Production (Manual Approval)
     if: github.ref_name == 'prod'
     needs: docker-build
     runs-on: ubuntu-latest
@@ -172,5 +172,22 @@ jobs:
       name: production
       url: https://console.aws.amazon.com/eks/home
     steps:
-      - name: Await manual approval before deploying to prod
-        run: echo "✅ Waiting for manual approval before prod deployment..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name $CLUSTER_NAME
+
+      - name: Deploy to production namespace
+        run: |
+          kubectl apply -f k8s/deployment-prod.yaml
+          kubectl apply -f k8s/service-prod.yaml
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
+            ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
+            -n prod
