@@ -157,7 +157,6 @@ jobs:
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
           ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
           -n ${{ needs.setup.outputs.environment }}
-
   prod-approval:
     name: Manual Approval for Prod
     if: github.ref_name == 'prod'
@@ -166,7 +165,6 @@ jobs:
     environment:
       name: production
       url: https://console.aws.amazon.com/eks/home
-    steps:
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -191,5 +189,4 @@ jobs:
             ${{ env.DEPLOYMENT_NAME }}=$ECR_URI:${{ github.sha }} \
             -n prod
       
-
 
