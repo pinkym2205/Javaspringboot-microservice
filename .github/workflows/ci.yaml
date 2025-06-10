@@ -59,6 +59,11 @@ jobs:
         if: matrix.job == 'junit'
         run: mvn test
 
+      - name: Build and Run Tests with Coverage
+        if: matrix.job == 'junit'
+        run: mvn clean jacoco:prepare-agent verify jacoco:report
+
+
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
         env:
@@ -68,6 +73,7 @@ jobs:
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
   quality-gate:
     name: Check Sonar Quality Gate
