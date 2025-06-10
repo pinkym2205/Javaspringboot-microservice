@@ -50,9 +50,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Print current job
+        run: echo "Running job: ${{ matrix.job }}"
+
       - name: Build and Run Tests
         if: matrix.job == 'junit'
         run: mvn clean verify jacoco:report
+
+      - name: Prepare for SonarQube
+        if: matrix.job == 'sonar'
+        run: mvn clean install
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
