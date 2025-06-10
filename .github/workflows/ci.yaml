@@ -58,6 +58,10 @@ jobs:
         if: matrix.job == 'junit'
         run: mvn test
 
+      - name: Generate JaCoCo XML Report
+        if: matrix.job == 'junit'
+        run: mvn jacoco:report
+
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
         env:
