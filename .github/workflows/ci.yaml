@@ -1,3 +1,4 @@
+
 name: EKS CI/CD Pipeline
 
 on:
@@ -50,19 +51,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Print current job
-        run: echo "Running job: ${{ matrix.job }}"
-
-      - name: Build and Run Tests
+      - name: Build with Maven
         if: matrix.job == 'junit'
-        run: mvn clean verify jacoco:report
+        run: mvn clean install
+
+      - name: Run JUnit Tests
+        if: matrix.job == 'junit'
+        run: mvn test
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn clean install sonar:sonar \
+          mvn sonar:sonar \
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
@@ -167,4 +169,3 @@ jobs:
     steps:
       - name: Await manual approval before deploying to prod
         run: echo "✅ Waiting for manual approval before prod deployment..."
-
