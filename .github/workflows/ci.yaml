@@ -50,17 +50,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build with Maven
+      - name: Build and Run Tests
         if: matrix.job == 'junit'
-        run: mvn clean install
-
-      - name: Run JUnit Tests
-        if: matrix.job == 'junit'
-        run: mvn test
-
-      - name: Generate JaCoCo XML Report
-        if: matrix.job == 'junit'
-        run: mvn jacoco:report
+        run: mvn clean verify jacoco:report
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
