@@ -57,16 +57,12 @@ jobs:
         if: matrix.job == 'junit'
         run: mvn clean verify jacoco:report
 
-      - name: Prepare for SonarQube
-        if: matrix.job == 'sonar'
-        run: mvn clean install
-
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn sonar:sonar \
+          mvn clean install sonar:sonar \
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=$SONAR_TOKEN
