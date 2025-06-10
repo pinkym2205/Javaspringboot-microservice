@@ -63,6 +63,19 @@ jobs:
         if: matrix.job == 'junit'
         run: mvn clean jacoco:prepare-agent verify jacoco:report
 
+      - name: Upload Jacoco Coverage Report
+        if: matrix.job == 'junit'
+        uses: actions/upload-artifact@v3
+        with:
+         name: coverage-report
+         path: target/site/jacoco/jacoco.xml
+      
+      - name: Download Jacoco Coverage Report
+        if: matrix.job == 'sonar'
+        uses: actions/download-artifact@v3
+        with:
+         name: coverage-report
+
 
       - name: Analyze with SonarQube
         if: matrix.job == 'sonar'
@@ -72,8 +85,8 @@ jobs:
           mvn sonar:sonar \
             -Dsonar.projectKey=pinkym2205_Javaspringboot-microservice \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=$SONAR_TOKEN
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.login=$SONAR_TOKEN \
+            -Dsonar.coverage.jacoco.xmlReportPaths=coverage-report/jacoco.xml
 
   quality-gate:
     name: Check Sonar Quality Gate
